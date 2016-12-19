@@ -5,9 +5,18 @@ module.exports = {
     },
     "extends": "eslint:recommended",
     "parserOptions": {
-        "sourceType": "module"
+        "ecmaVersion": 6,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "experimentalObjectRestSpread": true,
+        }
     },
+    "plugins": [
+        "jest"
+    ],
     "rules": {
+        "jest/no-exclusive-tests": 2,
+        "jest/no-identical-title": 2,
         "comma-dangle": [ 0 ],
         "no-this-before-super": [ 2 ],
         "constructor-super": [ 2 ],
