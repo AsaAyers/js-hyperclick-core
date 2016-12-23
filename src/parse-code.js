@@ -75,6 +75,8 @@ export default function parseCode(code) {
         return { parseError }
     }
 
+    // console.log(JSON.stringify(ast, null, 4))
+
     const scopes = []
     const externalModules = []
     const exports = {}
@@ -101,9 +103,12 @@ export default function parseCode(code) {
                     const { id } = parent
 
                     paths.push({
-                        start: node.arguments[0].start,
-                        end: node.arguments[0].end,
+                        imported: 'default',
                         moduleName,
+                        range: {
+                            start: node.arguments[0].start,
+                            end: node.arguments[0].end,
+                        },
                     })
 
                     if (t.isIdentifier(id)) {
@@ -121,9 +126,12 @@ export default function parseCode(code) {
             if (t.isLiteral(node.source)) {
                 const moduleName = node.source.value
                 paths.push({
-                    start: node.source.start,
-                    end: node.source.end,
+                    imported: 'default',
                     moduleName,
+                    range: {
+                        start: node.source.start,
+                        end: node.source.end,
+                    },
                 })
                 node.specifiers.forEach(({local, imported}) => {
                     let importedName = 'default'
@@ -144,10 +152,29 @@ export default function parseCode(code) {
         ExportNamedDeclaration({ node }) {
             const { specifiers, declaration } = node
 
+            const moduleName = (t.isLiteral(node.source)
+                ? node.source.value
+                : undefined
+            )
+
             specifiers.forEach((spec) => {
                 if (t.isExportSpecifier(spec)) {
                     const { name, start, end } = spec.exported
                     exports[name] = { start, end }
+
+                    // export ... from does not create a local binding, so I'm
+                    // gathering it in the paths. build-suggestion will convert
+                    // it back to a `from-module`
+                    if (moduleName && t.isIdentifier(spec.local)) {
+                        paths.push({
+                            imported: spec.local.name,
+                            moduleName,
+                            range: {
+                                start: spec.local.start,
+                                end: spec.local.end,
+                            }
+                        })
+                    }
                 }
             })
 
@@ -165,23 +192,27 @@ export default function parseCode(code) {
                 exports[name] = { start, end }
             }
 
-            if (t.isLiteral(node.source)) {
-                const moduleName = node.source.value
+            if (moduleName) {
                 paths.push({
-                    start: node.source.start,
-                    end: node.source.end,
+                    imported: 'default',
                     moduleName,
+                    range: {
+                        start: node.source.start,
+                        end: node.source.end,
+                    }
                 })
             }
-
         },
         ExportAllDeclaration({ node }) {
             if (t.isLiteral(node.source)) {
                 const moduleName = node.source.value
                 paths.push({
-                    start: node.source.start,
-                    end: node.source.end,
+                    imported: 'default',
                     moduleName,
+                    range: {
+                        start: node.source.start,
+                        end: node.source.end,
+                    }
                 })
             }
         },

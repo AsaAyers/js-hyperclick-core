@@ -78,11 +78,11 @@ describe('buildSuggestion', () => {
             moduleName: './foo',
         })
 
-        // testImport(info, annotations.exportFrom, {
-        //     moduleName: './other',
-        //     imported: 'exportFrom',
-        //     binding: annotations.exportFrom,
-        // })
+        testImport(info, annotations.exportFrom, {
+            moduleName: './other',
+            imported: 'exportFrom',
+            binding: annotations.exportFrom,
+        })
         testPath(info, annotations.exportFromPath, {
             moduleName: './other',
         })

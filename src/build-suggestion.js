@@ -20,16 +20,25 @@ export default function buildSuggestion(info, text, { start, end }, options = {}
 
     for (let i = 0; i < paths.length; i++) {
         const path = paths[i]
-        if (path.start > end) { break }
-        if (path.start < start && path.end > end) {
+        if (path.range.start > end) { break }
+        if (path.range.start <= start && path.range.end >= end) {
+
+            if (path.imported !== 'default') {
+                return {
+                    type: 'from-import',
+                    imported: path.imported,
+                    moduleName: path.moduleName,
+                    bindingStart: path.range.start,
+                    bindingEnd: path.range.end,
+                }
+
+            }
+
             return {
                 type: 'path',
-                imported: 'default',
+                imported: path.imported,
                 moduleName: path.moduleName,
-                range: {
-                    start: path.start,
-                    end: path.end,
-                }
+                range: path.range
             }
         }
     }
