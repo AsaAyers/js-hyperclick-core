@@ -1,12 +1,13 @@
 /* eslint-disable */
 
 import someModule /* someModule */, {
-    exportFrom, /* exportFrom */
-    missingExport /* missingExport */
+    namedExportFrom, /* namedExportFrom */
+    missingExport, /* missingExport */
+    name1, /* name1 */
+    name2, /* name2 */
+    name3, /* name3 */
+    name4, /* name4 */
 } from './es6-module'
 
-const foo /* foo */ = 'foo'
-
-
-
-console.log(foo /* logFoo */)
+// I had to add this here because es6-module can't have multiple default exports
+export default function() {}

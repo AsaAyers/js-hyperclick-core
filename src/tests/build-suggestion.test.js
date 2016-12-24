@@ -1,60 +1,115 @@
 /*eslint-env jest */
 import extractAnnotations from './utils/extract-annotations'
-import { parseCode, buildSuggestion } from '../index'
+import findLocation from './utils/find-location'
+import { parseCode, buildSuggestion, findDestination } from '../index'
+import diff from 'jest-diff'
 
-const testNull = (info, annotation) => {
-    const { label, text, start, end } = annotation
+const buildExpectations = (code, info, annotations) => () => {
+    const runner = (name) => {
+        if (annotations[name]) {
+            const { text, start, end } = annotations[name]
+            return buildSuggestion(info, text, { start, end })
+        }
+    }
 
-    test(`${label} is not clickable`, function() {
-        const actual = buildSuggestion(info, text, { start, end })
-        expect(actual).toBe(null)
-    })
-}
+    expect.extend({
+        toLinkToModule(startAnnotation, moduleName, imported = 'default') {
+            const actual = runner(startAnnotation)
+            const pass = (
+                actual != null
+                && actual.moduleName === moduleName
+                && actual.imported === imported
+            )
 
-const testPath = (info, annotation, expected) => {
-    const { label, text, start, end } = annotation
+            const message = () => {
+                let str = this.utils.matcherHint(
+                    (pass ? '.not' : '') + '.toLinkToModule',
+                    startAnnotation,
+                    this.utils.stringify(moduleName),
+                    {
+                        secondArgument: this.utils.stringify(imported),
+                    }
+                ) + "\n\n"
 
-    test(`location '${label}' links to ${expected.module}`, function() {
-        const actual = buildSuggestion(info, text, { start, end })
-        expect(actual).not.toBe(null)
-        expect(actual.type).toBe('path')
+                if (annotations[startAnnotation] == null) {
+                    str += `Annotation ${this.utils.EXPECTED_COLOR(startAnnotation)} not found\n`
+                } else if (actual == null) {
+                    str += `Annotation ${this.utils.EXPECTED_COLOR(startAnnotation)} is not a link.\n`
+                } else if (!pass) {
+                    const diffString = diff(
+                        { moduleName, imported},
+                        { moduleName: actual.moduleName, imported: actual.imported }
+                    )
+                    str += `Difference:\n\n${diffString}`
+                }
 
-        // Make sure the resolved range wraps around the original range
-        expect(actual.range.start).toBeLessThanOrEqual(start)
-        expect(actual.range.end).toBeGreaterThanOrEqual(end)
+                return str
+            }
 
-        expect(actual.moduleName).toBe(expected.moduleName)
-    })
-}
+            return { pass, message }
+        },
+        toBeALink(startAnnotation) {
+            const actual = runner(startAnnotation)
 
-const testImport = (info, annotation, expected) => {
-    const { label, text, start, end } = annotation
+            const pass = (
+                annotations[startAnnotation] != null
+                && actual != null
+            )
 
-    test(`location '${label}' imports ${expected.imported} from ${expected.moduleName}`, function() {
-        const actual = buildSuggestion(info, text, { start, end })
-        expect(actual).not.toBe(null)
-        expect(actual.type).toBe('from-import')
+            const message = () => {
+                let str = (pass
+                    ? this.utils.matcherHint('.not.toBeALink', startAnnotation, '')
+                    : this.utils.matcherHint('.toBeALink', startAnnotation, '')
+                ) + "\n\n"
 
-        expect(actual.moduleName).toBe(expected.moduleName)
-        expect(actual.imported).toBe(expected.imported)
+                if (annotations[startAnnotation] == null) {
+                    str += `Annotation ${this.utils.EXPECTED_COLOR(startAnnotation)} not found\n`
+                } else if (actual != null) {
+                    str += `Actually jumped to:\n`
+                    str += `${this.utils.RECEIVED_COLOR(findLocation(code, actual.start))}\n`
+                }
 
-        // Modules may also be used as bindings
-        expect(actual.bindingStart).toBe(expected.binding.start)
-        expect(actual.bindingEnd).toBe(expected.binding.end)
+                return str
+            }
 
-    })
-}
 
-const testBinding = (info, annotation, targetAnnotation) => {
-    const { label, text, start, end } = annotation
+            return { pass, message }
+        },
+        toJumpTo(startAnnotation, endAnnotation) {
+            const suggestion = runner(startAnnotation)
+            const actual = findDestination(info, suggestion)
+            const expected = annotations[endAnnotation] || {}
 
-    test(`location '${label}' jumps to ${targetAnnotation.label}`, function() {
-        const actual = buildSuggestion(info, text, { start, end })
-        expect(actual).not.toBe(null)
-        expect(actual.type).toBe('binding')
+            const pass = (
+                actual != null
+                && actual.start === expected.start
+            )
 
-        expect(actual.start).toBe(targetAnnotation.start)
-        expect(actual.end).toBe(targetAnnotation.end)
+            const message = () => {
+                let str = (pass
+                    ? this.utils.matcherHint('.not.toJumpTo', startAnnotation, endAnnotation)
+                    : this.utils.matcherHint('.toJumpTo', startAnnotation, endAnnotation)
+                ) + "\n\n"
+
+                if (expected.start == null) {
+                    str += `Annotation ${this.utils.EXPECTED_COLOR(endAnnotation)} not found\n`
+                } else {
+                    str += `Expected ${pass ? 'not ' : ''}to jump to:\n`
+                    str += `${this.utils.EXPECTED_COLOR(findLocation(code, expected.start))}\n`
+                }
+
+                if (actual == null) {
+                    str += `Annotation ${this.utils.RECEIVED_COLOR(startAnnotation)} not found\n`
+                } else if (!pass) {
+                    str += `Actually jumped to:\n`
+                    str += `${this.utils.RECEIVED_COLOR(findLocation(code, actual.start))}\n`
+                }
+
+                return str
+            }
+
+            return { pass, message}
+        }
     })
 }
 
@@ -63,90 +118,83 @@ describe('buildSuggestion', () => {
     describe('es6-module.js', () => {
         const { code, annotations } = extractAnnotations('es6-module.js')
         const info = parseCode(code)
+        beforeEach(buildExpectations(code, info, annotations))
 
-        testImport(info, annotations.foo, {
-            moduleName: './foo',
-            imported: 'default',
-            binding: annotations.foo,
-        })
-        testImport(info, annotations.namedFoo, {
-            moduleName: './foo',
-            imported: 'namedFoo',
-            binding: annotations.namedFoo,
-        })
-        testPath(info, annotations.fooPath, {
-            moduleName: './foo',
+        test(`var/const/let/function declarations don't have a destination`, () => {
+            expect('testVar').not.toBeALink()
+            expect('testConst').not.toBeALink()
+            expect('testLet').not.toBeALink()
+            expect('functionDeclaration').not.toBeALink()
         })
 
-        testImport(info, annotations.exportFrom, {
-            moduleName: './other',
-            imported: 'exportFrom',
-            binding: annotations.exportFrom,
-        })
-        testPath(info, annotations.exportFromPath, {
-            moduleName: './other',
+        test(`variables (var/let/const) jump to their definitions`, () => {
+            expect('log_testVar').toJumpTo('testVar')
+            expect('log_testConst').toJumpTo('testConst')
+            expect('log_testLet').toJumpTo('testLet')
         })
 
-        testPath(info, annotations.exportAll, {
-            moduleName: './export-all'
+        test(`clicking a function parameter jumps to its definition`, () => {
+            expect('log_param1').toJumpTo('param1')
         })
 
-        testImport(info, annotations.renamedBar, {
-            moduleName: './bar.js',
-            imported: 'namedBar',
-            binding: annotations.renamedBar,
+        test(`function declarations work inside and out`, () => {
+            expect(`log_functionDeclaration`).toJumpTo('functionDeclaration')
+            expect(`log2_functionDeclaration`).toJumpTo('functionDeclaration')
         })
 
-        // Clicking the declaration doesn't have anywhere for you to go
-        testNull(info, annotations.someVar)
-        testNull(info, annotations.someLet)
-        testNull(info, annotations.someConst)
-
-        testImport(info, annotations.logPath, {
-            moduleName: 'path',
-            imported: 'default',
-            binding: annotations.path,
+        test(`destructuring works on params and variables`, () => {
+            expect('log_dstrP1').toJumpTo('dstrP1')
+            expect('log_dstrP2').toJumpTo('dstrP2')
+            expect('log_dstrC1').toJumpTo('dstrC1')
+            expect('log_dstrC2').toJumpTo('dstrC2')
         })
-        testBinding(info, annotations.logSomeVar, annotations.someVar)
-        testBinding(info, annotations.logSomeLet, annotations.someLet)
-        testBinding(info, annotations.logSomeConst, annotations.someConst)
-        testImport(info, annotations.logFoo, {
-            moduleName: './foo',
-            imported: 'default',
-            binding: annotations.foo,
-        })
-        testBinding(info, annotations.logDestructureA, annotations.destructureA)
-        // testBinding(info, annotations.logDestructureB, annotations.destructureB)
-        testBinding(info, annotations.logDestructureC, annotations.destructureC)
 
-        testBinding(info, annotations.logShadow, annotations.shadowConst)
-        testNull(info, annotations.defaultExport)
-        testBinding(info, annotations.callMyFunc, annotations.myFunc)
+        test(`imported variables link to other modules`, () => {
+            expect('otherDefault').toLinkToModule('./other')
+            expect('log_otherDefault').toLinkToModule('./other')
+
+            expect('otherNamed').toLinkToModule('./other', 'otherNamed')
+            expect('log_otherNamed').toLinkToModule('./other', 'otherNamed')
+
+            expect('renamed').toLinkToModule('./other', 'otherNamed2')
+            expect('log_renamed').toLinkToModule('./other', 'otherNamed2')
+
+        })
+
+        test.skip(`Renamed imports are links`, () => {
+            expect('otherNamed2').toLinkToModule('./other', 'otherNamed2')
+        })
+
+        test(`exporting existing variables makes them links`, () => {
+            expect(`export_testConst`).toJumpTo('testConst')
+        })
+
+        test(`export ... from statements are links`, () => {
+            expect(`namedExportFrom`).toLinkToModule('./exportFrom', 'namedExportFrom')
+            expect(`exportStar`).toLinkToModule('./exportStar.js')
+        })
+
+        test.skip(`[failing] export ... from statements are links`, () => {
+            expect(`defaultExportFrom`).toLinkToModule('./exportFrom')
+        })
+
+        test(`keywords are not links`, () => {
+            expect('if').not.toBeALink()
+        })
     })
 
     describe('cjs.js', () => {
         const { code, annotations } = extractAnnotations('cjs.js')
         const info = parseCode(code)
+        beforeEach(buildExpectations(code, info, annotations))
 
-        testImport(info, annotations.basicRequire, {
-            moduleName: './basicRequire',
-            imported: 'default',
-            binding: annotations.basicRequire,
+        test(`require() are supported`, () => {
+            expect('basicRequire').toLinkToModule('./basicRequire', 'default')
         })
 
-        testImport(info, annotations.destructured, {
-            moduleName: './destructured',
-            // require() can only import the default export
-            imported: 'default',
-            binding: annotations.destructured,
-        })
-
-        testImport(info, annotations.renamed, {
-            moduleName: './renamed',
-            // require() can only import the default export
-            imported: 'default',
-            binding: annotations.renamed,
+        test(`destructuring does not link to named exports`, () => {
+            expect('destructured').toLinkToModule('./destructured', 'default')
+            expect('renamed').toLinkToModule('./renamed', 'default')
         })
     })
-
 })

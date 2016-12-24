@@ -144,6 +144,16 @@ export default function parseCode(code) {
             }
         },
         ExportDefaultDeclaration({ node }) {
+            const { declaration } = node
+
+            if (t.isIdentifier(declaration)) {
+                exports.default = {
+                    start: declaration.start,
+                    end: declaration.end,
+                }
+                return
+            }
+
             exports.default = {
                 start: node.start,
                 end: node.end,
