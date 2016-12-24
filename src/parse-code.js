@@ -185,6 +185,22 @@ export default function parseCode(code) {
                             }
                         })
                     }
+                } else if (t.isExportDefaultSpecifier(spec)) {
+                    const { name, start, end } = spec.exported
+                    exports[name] = { start, end }
+
+                    if (moduleName) {
+                        paths.push({
+                            imported: 'default',
+                            moduleName,
+                            range: {
+                                start: spec.exported.start,
+                                end: spec.exported.end,
+                            }
+                        })
+
+                    }
+
                 }
             })
 

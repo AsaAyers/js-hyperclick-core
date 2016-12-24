@@ -172,9 +172,6 @@ describe('buildSuggestion', () => {
         test(`export ... from statements are links`, () => {
             expect(`namedExportFrom`).toLinkToModule('./exportFrom', 'namedExportFrom')
             expect(`exportStar`).toLinkToModule('./exportStar.js')
-        })
-
-        test.skip(`[failing] export ... from statements are links`, () => {
             expect(`defaultExportFrom`).toLinkToModule('./exportFrom')
         })
 
