@@ -91,6 +91,17 @@ export default function parseCode(code) {
             imported,
         })
     }
+    const addUnboundModule = (moduleName, identifier, imported = identifier.name) => {
+        paths.push({
+            imported,
+            moduleName,
+            range: {
+                start: identifier.start,
+                end: identifier.end,
+            }
+        })
+
+    }
 
     const visitors = {
         Scope({ scope }) {
@@ -125,6 +136,15 @@ export default function parseCode(code) {
         ImportDeclaration({ node }) {
             if (t.isLiteral(node.source)) {
                 const moduleName = node.source.value
+                node.specifiers.forEach(({local, imported}) => {
+                    let importedName = 'default'
+                    if (imported != null) {
+                        addUnboundModule(moduleName, imported)
+                        importedName = imported.name
+                    }
+
+                    addModule(moduleName, local, importedName)
+                })
                 paths.push({
                     imported: 'default',
                     moduleName,
@@ -132,14 +152,6 @@ export default function parseCode(code) {
                         start: node.source.start,
                         end: node.source.end,
                     },
-                })
-                node.specifiers.forEach(({local, imported}) => {
-                    let importedName = 'default'
-                    if (imported != null) {
-                        importedName = imported.name
-                    }
-
-                    addModule(moduleName, local, importedName)
                 })
             }
         },
@@ -172,18 +184,20 @@ export default function parseCode(code) {
                     const { name, start, end } = spec.exported
                     exports[name] = { start, end }
 
+
                     // export ... from does not create a local binding, so I'm
                     // gathering it in the paths. build-suggestion will convert
                     // it back to a `from-module`
                     if (moduleName && t.isIdentifier(spec.local)) {
-                        paths.push({
-                            imported: spec.local.name,
-                            moduleName,
-                            range: {
-                                start: spec.local.start,
-                                end: spec.local.end,
-                            }
-                        })
+                        addUnboundModule(moduleName, spec.local)
+                        // paths.push({
+                        //     imported: spec.local.name,
+                        //     moduleName,
+                        //     range: {
+                        //         start: spec.local.start,
+                        //         end: spec.local.end,
+                        //     }
+                        // })
                     }
                 } else if (t.isExportDefaultSpecifier(spec)) {
                     const { name, start, end } = spec.exported

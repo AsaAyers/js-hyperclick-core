@@ -4,7 +4,9 @@ import findLocation from './utils/find-location'
 import { parseCode, buildSuggestion, findDestination } from '../index'
 import diff from 'jest-diff'
 
-const buildExpectations = (code, info, annotations) => () => {
+const buildExpectations = (filename) => () => {
+    const { code, annotations } = extractAnnotations(filename)
+    const info = parseCode(code)
     const runner = (name) => {
         if (annotations[name]) {
             const { text, start, end } = annotations[name]
@@ -116,9 +118,7 @@ const buildExpectations = (code, info, annotations) => () => {
 describe('buildSuggestion', () => {
 
     describe('es6-module.js', () => {
-        const { code, annotations } = extractAnnotations('es6-module.js')
-        const info = parseCode(code)
-        beforeEach(buildExpectations(code, info, annotations))
+        beforeEach(buildExpectations('es6-module.js'))
 
         test(`var/const/let/function declarations don't have a destination`, () => {
             expect('testVar').not.toBeALink()
@@ -161,7 +161,7 @@ describe('buildSuggestion', () => {
 
         })
 
-        test.skip(`Renamed imports are links`, () => {
+        test(`Renamed imports are links`, () => {
             expect('otherNamed2').toLinkToModule('./other', 'otherNamed2')
         })
 
@@ -181,9 +181,7 @@ describe('buildSuggestion', () => {
     })
 
     describe('cjs.js', () => {
-        const { code, annotations } = extractAnnotations('cjs.js')
-        const info = parseCode(code)
-        beforeEach(buildExpectations(code, info, annotations))
+        beforeEach(buildExpectations('cjs.js'))
 
         test(`require() are supported`, () => {
             expect('basicRequire').toLinkToModule('./basicRequire', 'default')
