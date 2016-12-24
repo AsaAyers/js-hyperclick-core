@@ -266,9 +266,12 @@ export default function parseCode(code) {
                 })
             }
         },
-        AssignmentExpression({ node: {left, start, end} }) {
-            if (isModuleDotExports(left)) {
-                exports.default = { start, end }
+        AssignmentExpression({ node }) {
+            if (isModuleDotExports(node.left)) {
+                exports.default = {
+                    start: node.left.start,
+                    end: node.left.end
+                }
             }
         }
     }
