@@ -191,5 +191,9 @@ describe('buildSuggestion', () => {
             expect('destructured').toLinkToModule('./destructured', 'default')
             expect('renamed').toLinkToModule('./renamed', 'default')
         })
+
+        test(`module.exports = require(...) is a link`, () => {
+            expect('exports').toLinkToModule('./es6-module')
+        })
     })
 })

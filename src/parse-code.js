@@ -100,8 +100,14 @@ export default function parseCode(code) {
                 end: identifier.end,
             }
         })
-
     }
+
+    const isModuleDotExports = (node)  => (
+        t.isMemberExpression(node)
+        && t.isIdentifier(node.object, { name: 'module'})
+        && t.isIdentifier(node.property, { name: 'exports'})
+    )
+
 
     const visitors = {
         Scope({ scope }) {
@@ -112,6 +118,10 @@ export default function parseCode(code) {
                 if (t.isLiteral(node.arguments[0])) {
                     const moduleName = node.arguments[0].value
                     const { id } = parent
+
+                    if (t.isAssignmentExpression(parent) && isModuleDotExports(parent.left)) {
+                        addUnboundModule(moduleName, parent.left, 'default')
+                    }
 
                     paths.push({
                         imported: 'default',
@@ -257,10 +267,7 @@ export default function parseCode(code) {
             }
         },
         AssignmentExpression({ node: {left, start, end} }) {
-            if (t.isMemberExpression(left)
-                && t.isIdentifier(left.object), { name: 'module'}
-                && t.isIdentifier(left.property, { name: 'exports'})
-            ) {
+            if (isModuleDotExports(left)) {
                 exports.default = { start, end }
             }
         }
