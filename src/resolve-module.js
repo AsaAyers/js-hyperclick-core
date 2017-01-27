@@ -21,11 +21,7 @@ function findPackageJson(basedir) {
     return packagePath
 }
 
-function loadModuleRoots(basedir) {
-    const packagePath = findPackageJson(basedir)
-    if (!packagePath) {
-        return
-    }
+function loadModuleRoots(basedir, packagePath) {
     const config = JSON.parse(fs.readFileSync(packagePath))
 
     if (config && config.moduleRoots) {
@@ -43,12 +39,19 @@ function loadModuleRoots(basedir) {
 
 
 function resolveWithCustomRoots(basedir, absoluteModule, options) {
+    const packagePath = findPackageJson(basedir)
+    if (!packagePath) {
+        return
+    }
+    const config = JSON.parse(fs.readFileSync(packagePath))
+
     const { extensions = defaultExtensions } = options
-    const moduleName = `./${absoluteModule}`
 
-    const roots = loadModuleRoots(basedir)
+    let moduleName = `./${absoluteModule}`
 
-    if (roots) {
+    const roots = loadModuleRoots(basedir, packagePath)
+
+    function resolveIt(moduleName) {
         const resolveOptions = { basedir, extensions }
         for (let i = 0; i < roots.length; i++) {
             resolveOptions.basedir = roots[i]
@@ -59,6 +62,19 @@ function resolveWithCustomRoots(basedir, absoluteModule, options) {
                 /* do nothing */
             }
         }
+    }
+
+    if (roots) {
+        // Resolve with custom paths
+        if (config && config.customPaths && !options.disableCustomPaths) {
+            for (const [key, value] of Object.entries(config.customPaths)) {
+                moduleName = moduleName.replace(key, value)
+                return resolveIt(moduleName)
+            }
+        }
+
+        // Resolve without custom paths
+        return resolveIt(moduleName)
     }
 }
 
