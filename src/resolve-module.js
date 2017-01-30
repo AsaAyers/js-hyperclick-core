@@ -67,7 +67,8 @@ function resolveWithCustomRoots(basedir, absoluteModule, options) {
     if (roots) {
         // Resolve with custom paths
         if (config && config.customPaths && !options.disableCustomPaths) {
-            for (const [key, value] of Object.entries(config.customPaths)) {
+            for (const key of Object.keys(config.customPaths)) {
+                const value = config.customPaths[key]
                 moduleName = moduleName.replace(key, value)
                 return resolveIt(moduleName)
             }
