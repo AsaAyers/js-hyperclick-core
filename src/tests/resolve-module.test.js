@@ -111,6 +111,32 @@ describe('resolveModule', () => {
         expect(actual).toEqual(expected)
     })
 
+    test(`resolve using customPaths in project.json`, () => {
+        const suggestion = {
+            moduleName: 'tests/foo/dummy'
+        }
+        const expected = {
+            filename: path.join(__dirname, './bar/dummy.js')
+        }
+
+        const actual = resolveModule(__filename, suggestion, options)
+        expect(actual).toEqual(expected)
+    })
+
+    test(`resolve with customPaths disabled`, () => {
+        const suggestion = {
+            moduleName: 'tests/foo/dummy'
+        }
+        const expected = {
+            filename: undefined
+        }
+
+        options.disableCustomPaths = true
+
+        const actual = resolveModule(__filename, suggestion, options)
+        expect(actual).toEqual(expected)
+    })
+
     test(`resolving when there is no package.json`, () => {
         const suggestion = {
             moduleName: 'parse-code'

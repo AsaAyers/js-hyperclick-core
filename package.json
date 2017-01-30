@@ -29,6 +29,9 @@
   "author": "Asa Ayers <Asa@AsaAyers.com>",
   "license": "ISC",
   "moduleRoots": "src",
+  "customPaths": {
+    "tests/foo": "tests/bar"
+  },
   "devDependencies": {
     "babel-cli": "^6.18.0",
     "babel-jest": "^18.0.0",
