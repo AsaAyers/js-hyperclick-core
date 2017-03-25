@@ -121,5 +121,30 @@ describe('resolveModule', () => {
         expect(actual).toEqual(expected)
     })
 
+    test('useRealpath option working', () => {
+        const suggestion = {
+            moduleName: './fixtures/symlink'
+        }
+
+        // disabled
+        let expected = {
+            filename: path.join(__dirname, './fixtures/symlink.js')
+        }
+        let options = {
+            useRealpath: false
+        }
+        let actual = resolveModule(__filename, suggestion, options)
+        expect(actual).toEqual(expected)
+
+        // enabled
+        expected = {
+            filename: path.join(__dirname, './fixtures/realpath.js')
+        }
+        options = {
+            useRealpath: true
+        }
+        actual = resolveModule(__filename, suggestion, options)
+        expect(actual).toEqual(expected)
+    })
 
 })

@@ -63,7 +63,10 @@ function resolveWithCustomRoots(basedir, absoluteModule, options) {
 }
 
 export default function resolveModule(filePath, suggestion, options = {}) {
-    const { extensions = defaultExtensions } = options
+    const {
+      extensions = defaultExtensions,
+      useRealpath,
+    } = options
     let { moduleName } = suggestion
 
     const basedir = path.dirname(filePath)
@@ -78,6 +81,11 @@ export default function resolveModule(filePath, suggestion, options = {}) {
                 url: `http://nodejs.org/api/${moduleName}.html`
             }
         }
+
+        if(filename && useRealpath) {
+            filename = fs.realpathSync(filename)
+        }
+
     } catch (e) {
         /* do nothing */
     }
