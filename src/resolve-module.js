@@ -7,14 +7,14 @@ import { sync as resolve } from 'resolve'
 // Default comes from Node's `require.extensions`
 const defaultExtensions = [ '.js', '.json', '.node' ]
 
-function findPackageJson(basedir) {
-    const packagePath = path.resolve(basedir, 'package.json')
+function findRecursively(basedir, fileName) {
+    const packagePath = path.resolve(basedir, fileName)
     try {
         fs.accessSync(packagePath)
     } catch (e) {
         const parent = path.resolve(basedir, '../')
-        if (parent != basedir) {
-            return findPackageJson(parent)
+        if (parent !== basedir) {
+            return findRecursively(parent, fileName)
         }
         return undefined
     }
@@ -22,7 +22,7 @@ function findPackageJson(basedir) {
 }
 
 function loadModuleRoots(basedir) {
-    const packagePath = findPackageJson(basedir)
+    const packagePath = findRecursively(basedir, 'package.json')
     if (!packagePath) {
         return
     }
