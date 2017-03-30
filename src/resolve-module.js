@@ -26,19 +26,19 @@ function loadModuleRoots(basedir) {
     if (!packagePath) {
         return
     }
-    const config = JSON.parse(fs.readFileSync(packagePath))
 
-    if (config && config.moduleRoots) {
-        let roots = config.moduleRoots
-        if (typeof roots === 'string') {
-            roots = [ roots ]
-        }
-
-        const packageDir = path.dirname(packagePath)
-        return roots.map(
-            r => path.resolve(packageDir , r)
-        )
+    const config = require(packagePath)
+    let roots = config && config.moduleRoots
+    if (!roots) {
+        return
     }
+
+    if (typeof roots === 'string') {
+        roots = [ roots ]
+    }
+
+    const packageDir = path.dirname(packagePath)
+    return roots.map(r => path.resolve(packageDir, r))
 }
 
 
