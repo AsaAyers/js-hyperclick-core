@@ -37,27 +37,25 @@ function loadModuleRoots(basedir) {
         roots = [ roots ]
     }
 
+    // make paths absolute and return them
     const packageDir = path.dirname(packagePath)
     return roots.map(r => path.resolve(packageDir, r))
 }
 
 
-function resolveWithCustomRoots(basedir, absoluteModule, options) {
-    const { extensions = defaultExtensions } = options
+function resolveWithCustomRoots(basedir, absoluteModule, resolveOptions) {
     const moduleName = `./${absoluteModule}`
 
     const roots = loadModuleRoots(basedir)
+    if (!roots) {
+        return
+    }
 
-    if (roots) {
-        const resolveOptions = { basedir, extensions }
-        for (let i = 0; i < roots.length; i++) {
-            resolveOptions.basedir = roots[i]
-
-            try {
-                return resolve(moduleName, resolveOptions)
-            } catch (e) {
-                /* do nothing */
-            }
+    for (let i = 0; i < roots.length; i++) {
+        try {
+            return resolve(moduleName, { ...resolveOptions, basedir: roots[i] })
+        } catch (e) {
+            /* do nothing */
         }
     }
 }
@@ -90,7 +88,7 @@ export default function resolveModule(filePath, suggestion, options = {}) {
 
         filename = path.join(basedir, moduleName)
     } else if (!filename) {
-        filename = resolveWithCustomRoots(basedir, moduleName, options)
+        filename = resolveWithCustomRoots(basedir, moduleName, resolveOptions)
     }
 
     return { filename }
