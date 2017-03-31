@@ -60,6 +60,23 @@ function resolveWithCustomRoots(basedir, absoluteModule, resolveOptions) {
     }
 }
 
+function resolveWithWebpack(basedir, absoluteModule, resolveOptions) {
+    const moduleName = `./${absoluteModule}`
+
+    const roots = loadModuleRoots(basedir, 'webpack.config.js', (config) => config.resolve && config.resolve.modules)
+    if (!roots) {
+        return
+    }
+
+    for (let i = 0; i < roots.length; i++) {
+        try {
+            return resolve(moduleName, { ...resolveOptions, basedir: roots[i] })
+        } catch (e) {
+            /* do nothing */
+        }
+    }
+}
+
 export default function resolveModule(filePath, suggestion, options = {}) {
     const { extensions = defaultExtensions } = options
     let { moduleName } = suggestion
@@ -88,7 +105,7 @@ export default function resolveModule(filePath, suggestion, options = {}) {
 
         filename = path.join(basedir, moduleName)
     } else if (!filename) {
-        filename = resolveWithCustomRoots(basedir, moduleName, resolveOptions)
+        filename = resolveWithWebpack(basedir, moduleName, resolveOptions) || resolveWithCustomRoots(basedir, moduleName, resolveOptions)
     }
 
     return { filename }
