@@ -8,9 +8,9 @@ import { sync as resolve } from 'resolve'
 const defaultExtensions = [ '.js', '.json', '.node' ]
 
 function findRecursively(basedir, fileName) {
-    const packagePath = path.resolve(basedir, fileName)
+    const configPath = path.resolve(basedir, fileName)
     try {
-        fs.accessSync(packagePath)
+        fs.accessSync(configPath)
     } catch (e) {
         const parent = path.resolve(basedir, '../')
         if (parent !== basedir) {
@@ -18,17 +18,17 @@ function findRecursively(basedir, fileName) {
         }
         return undefined
     }
-    return packagePath
+    return configPath
 }
 
-function loadModuleRoots(basedir) {
-    const packagePath = findRecursively(basedir, 'package.json')
-    if (!packagePath) {
+function loadModuleRoots(basedir, configName, keys) {
+    const configPath = findRecursively(basedir, configName)
+    if (!configPath) {
         return
     }
 
-    const config = require(packagePath)
-    let roots = config && config.moduleRoots
+    const config = require(configPath)
+    let roots = config && keys(config)
     if (!roots) {
         return
     }
@@ -38,7 +38,7 @@ function loadModuleRoots(basedir) {
     }
 
     // make paths absolute and return them
-    const packageDir = path.dirname(packagePath)
+    const packageDir = path.dirname(configPath)
     return roots.map(r => path.resolve(packageDir, r))
 }
 
@@ -46,7 +46,7 @@ function loadModuleRoots(basedir) {
 function resolveWithCustomRoots(basedir, absoluteModule, resolveOptions) {
     const moduleName = `./${absoluteModule}`
 
-    const roots = loadModuleRoots(basedir)
+    const roots = loadModuleRoots(basedir, 'package.json', (config) => config.moduleRoots)
     if (!roots) {
         return
     }
