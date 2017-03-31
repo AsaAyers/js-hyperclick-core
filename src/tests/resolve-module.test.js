@@ -99,6 +99,18 @@ describe('resolveModule', () => {
         expect(actual).toEqual(expected)
     })
 
+    test(`resolve using "modules" in webpack.config.js`, () => {
+        const suggestion = {
+            moduleName: 'all-imports'
+        }
+        const expected = {
+            filename: path.join(__dirname, './fixtures/all-imports.js')
+        }
+
+        const actual = resolveModule(__filename, suggestion, options)
+        expect(actual).toEqual(expected)
+    })
+
     test(`resolve using moduleRoots in project.json`, () => {
         const suggestion = {
             moduleName: 'parse-code'
@@ -111,7 +123,7 @@ describe('resolveModule', () => {
         expect(actual).toEqual(expected)
     })
 
-    test(`resolving when there is no package.json`, () => {
+    test(`resolving when there is no webpack.config.js or package.json`, () => {
         const suggestion = {
             moduleName: 'parse-code'
         }
